@@ -1,5 +1,7 @@
 # ServerObject Meteor Package
 
+Create proxy objects on the client for even easier server integration.
+
 [![Build Status](https://travis-ci.org/numtel/serverobject.svg?branch=master)](https://travis-ci.org/numtel/serverobject)
 
 ### Installation
@@ -10,7 +12,7 @@ Run the following command
 
 ### Implements
 
-* `ServerObject(type, [argument, argument...], callback)`
+* `ServerObject(type, [argument, argument...,] callback)`
 
 Creates a new instance of an object on the server. 
 Can be called from both client and server.
@@ -25,6 +27,7 @@ All methods are now asynchronous, append a callback(`error, result`) argument to
 For methods with their own callbacks, pass callback functions normally but do not forget about the last parameter always being a callback for the method's return value. See `serverobject-tests.js` for an example with multiple callbacks.
 
 Instance properties are copied from the server on construction, method calls, and any callbacks.
+On method calls, instance properties from the client are copied to the server.
 
 * `ServerObject.allow({key: {ref: reference, [where: function]}})`
 

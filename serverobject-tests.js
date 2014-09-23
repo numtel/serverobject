@@ -53,9 +53,10 @@ testAsyncMulti('ServerObject - constructor + value update', [
   }
 ]);
 
-testAsyncMulti('ServerObject - synchronous function + value update', [
+testAsyncMulti('ServerObject - synchronous function + value update both directions', [
   function (test, expect) {
     var instance;
+    var testValue = 'from the client';
     var toReverse = 'testers';
     var expected = toReverse.split('').reverse().join('');
     var objCallback = function(error, result){
@@ -63,12 +64,15 @@ testAsyncMulti('ServerObject - synchronous function + value update', [
         throw error;
       };
       instance = result;
+      instance.testValue = testValue;
       instance.reverseString(toReverse, reverseCallback);
     };
     var reverseCallback = expect(function(error, result){
       if(error){
         throw error;
       };
+      // Instance should have values set on client
+      test.equal(instance.testValue, testValue);
       // Instance should be updated with new values
       test.equal(instance.lastReversed, toReverse);
       // Check return value

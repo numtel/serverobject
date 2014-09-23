@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Instantiate and call methods on objects on the server from the client.",
-  version: "0.0.1",
+  version: "0.0.2",
   git: "https://github.com/numtel/serverobject.git"
 });
 

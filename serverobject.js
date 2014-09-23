@@ -1,26 +1,37 @@
-var global = this || window;
-ServerObjectCallbacks = new Meteor.Collection('_ServerObject_callbacks');
-global.ServerObjectCallbacks = ServerObjectCallbacks;
-if(Meteor.isClient){
-  Meteor.subscribe('ServerObject_callbacks');
-};
-ServerObjectCallbacks.find().observe({
-  changed: function(newCallback, oldCallback){
-    if(readyCallbacks.hasOwnProperty(newCallback._id)){
-      var thisCallback = readyCallbacks[newCallback._id];
-      updateObj.call(thisCallback.instance, newCallback);
-      var argsArray = Object.keys(newCallback.args)
-                        .map(function(k) { return newCallback.args[k] });
-      thisCallback.func.apply(global, argsArray);
+
+this.ServerObject = function(){
+  if(arguments.length < 2){
+    throw new Error('Must pass object identifier key string and callback.');
+  };
+  var callback = Array.prototype.pop.call(arguments);
+  if(typeof callback !== 'function'){
+    throw new Error('Must pass callback.');
+  };
+  Meteor.apply('_ServerObject_create', arguments, function(error, result){
+    if(error){
+      callback(error);
+      return;
     };
-    // Remove from queue
-    Meteor.call('_ServerObject_callbackReceived', newCallback._id);
-  }
-});
+    var instance = new Object();
+    ServerObject.updateObject.call(instance, result);
 
-var readyCallbacks = {};
+    callback(undefined, instance);
+  });
+};
 
-var updateObj = function(result){
+ServerObject.instanceValues = function(instance){
+  var output = {};
+  for(var i in instance){
+    if(instance.hasOwnProperty(i) && 
+       i !== 'prototype' && 
+       typeof instance[i] !== 'function'){
+      output[i] = instance[i];
+    };
+  };
+  return output;
+};
+
+ServerObject.updateObject = function(result){
   var that = this;
 
   // Remove old values/methods
@@ -40,6 +51,7 @@ var updateObj = function(result){
   this.prototype = {};
   this.prototype.instanceKey = result.id;
 
+  // Define pass-thru methods
   result.methods.forEach(function(methodName){
     that[methodName] = function(){
       var callback = Array.prototype.pop.call(arguments);
@@ -61,6 +73,7 @@ var updateObj = function(result){
       Meteor.call('_ServerObject_method', {
         id: that.prototype.instanceKey,
         method: methodName,
+        values: ServerObject.instanceValues(that),
         args: args
       }, function(error, result){
         if(result && result.errVal){
@@ -72,13 +85,14 @@ var updateObj = function(result){
         };
 
         result.callbacks.forEach(function(callbackId, index){
+          // Define callback pass-thru
           readyCallbacks[callbackId] = {
             instance: that,
             func: otherCallbacks[index]
           };
         });
 
-        updateObj.call(that, result);
+        ServerObject.updateObject.call(that, result);
 
         if(callback){
           callback(undefined, result.retVal);
@@ -88,23 +102,32 @@ var updateObj = function(result){
   });
 };
 
-global.ServerObject = function(){
-  if(arguments.length < 2){
-    throw new Error('Must pass object identifier key string and callback.');
-  };
-  var callback = Array.prototype.pop.call(arguments);
-  if(typeof callback !== 'function'){
-    throw new Error('Must pass callback.');
-  };
-  Meteor.apply('_ServerObject_create', arguments, function(error, result){
-    if(error){
-      callback(error);
-      return;
-    };
-    var instance = new Object();
-    updateObj.call(instance, result);
+// Callback infrastructure
+this.ServerObjectCallbacks = new Meteor.Collection('_ServerObject_callbacks');
 
-    callback(undefined, instance);
-  });
+if(Meteor.isClient){
+  Meteor.subscribe('_ServerObject_callbacks');
 };
+
+var observeClause = {};
+if(Meteor.isServer){
+  observeClause = {connection: 'server'};
+};
+
+var global = this;
+var readyCallbacks = {};
+ServerObjectCallbacks.find(observeClause).observe({
+  // Callback documents are inserted on method call and filled in later
+  changed: function(newCallback, oldCallback){
+    if(readyCallbacks.hasOwnProperty(newCallback._id)){
+      var thisCallback = readyCallbacks[newCallback._id];
+      ServerObject.updateObject.call(thisCallback.instance, newCallback);
+      var argsArray = Object.keys(newCallback.args)
+                        .map(function(k) { return newCallback.args[k] });
+      thisCallback.func.apply(global, argsArray);
+    };
+    // Remove from queue
+    Meteor.call('_ServerObject_callbackReceived', newCallback._id);
+  }
+});
 

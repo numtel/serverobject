@@ -13,17 +13,6 @@ ServerObject.allowed = {};
 
 var instances = {};
 
-var instanceValues = function(instance){
-  var output = {};
-  for(var i in instance){
-    if(instance.hasOwnProperty(i) && 
-       i !== 'prototype' && 
-       typeof instance[i] !== 'function'){
-      output[i] = instance[i];
-    };
-  };
-  return output;
-};
 var instanceMethods = function(instance){
   var output = [];
   for(var i in instance.prototype){
@@ -62,7 +51,7 @@ Meteor.methods({
 
     return {
       id: instanceKey,
-      values: instanceValues(instance),
+      values: ServerObject.instanceValues(instance),
       methods: instanceMethods(instance)
     };
   },
@@ -90,12 +79,19 @@ Meteor.methods({
           ServerObjectCallbacks.update(callbackId, {
             $set: {
               args: arguments,
-              values: instanceValues(instance),
+              values: ServerObject.instanceValues(instance),
               methods: instanceMethods(instance)}
           });
         });
       };
     });
+
+    // Set values
+    for(var i in options.values){
+      if(options.values.hasOwnProperty(i)){
+        instance[i] = options.values[i];
+      };
+    };
 
     var retVal, errVal;
     try{
@@ -115,7 +111,7 @@ Meteor.methods({
       retVal: retVal,
       errVal: errVal,
       callbacks: callbacks,
-      values: instanceValues(instance),
+      values: ServerObject.instanceValues(instance),
       methods: instanceMethods(instance)
     };
   },
@@ -132,7 +128,7 @@ Meteor.startup(function(){
   ServerObjectCallbacks.remove({});
 });
 
-Meteor.publish('ServerObject_callbacks', function(){
+Meteor.publish('_ServerObject_callbacks', function(){
   var connectionId = this.connection ? this.connection.id : 'server';
   this._session.socket.on("close", Meteor.bindEnvironment(function(){
     ServerObjectCallbacks.remove({connection: connectionId});
