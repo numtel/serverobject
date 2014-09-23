@@ -12,7 +12,7 @@ Package.onUse(function(api) {
 
 Package.onTest(function(api) {
   api.use('tinytest');
-  api.use('serverobject');
+  api.use('numtel:serverobject');
   api.use('test-helpers');
   api.addFiles('serverobject-tests.js');
 });
