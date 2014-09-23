@@ -24,11 +24,17 @@ All methods are now asynchronous, append a callback(`error, result`) argument to
 
 For methods with their own callbacks, pass callback functions normally but do not forget about the last parameter always being a callback for the method's return value. See `serverobject-tests.js` for an example with multiple callbacks.
 
-* `ServerObject.allow({key: {ref: reference, [where: function])`
+Instance properties are copied from the server on construction, method calls, and any callbacks.
+
+* `ServerObject.allow({key: {ref: reference, [where: function]}})`
 
 Only available on the server, this method defines an object type for instantiation.
 
-If supplied, the `where` function will be called on the server after instantiating the object but before responding to the client. Return a boolean to determine whether to proceed with transmitting the instance. The context of the function will be set to the instance itself.
+`key` refers to a string that will identify this type of object. These keys are what is passed into ServerObject() as the `type` argument.
+
+`ref` refers to the symbolic reference to the variable containing the constructor function (like you would `new reference()`)
+
+`where` refers to an optional function. If supplied, the `where` function will be called on the server after instantiating the object but before responding to the client. Return a boolean to determine whether to proceed with transmitting the instance. The context of the function will be set to the instance itself.
 
 ### Usage
 
