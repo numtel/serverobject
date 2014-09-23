@@ -1,5 +1,5 @@
 
-this.ServerObject = function(){
+ServerObject = function(){
   if(arguments.length < 2){
     throw new Error('Must pass object identifier key string and callback.');
   };
@@ -103,7 +103,7 @@ ServerObject.updateObject = function(result){
 };
 
 // Callback infrastructure
-this.ServerObjectCallbacks = new Meteor.Collection('_ServerObject_callbacks');
+ServerObjectCallbacks = new Meteor.Collection('_ServerObject_callbacks');
 
 if(Meteor.isClient){
   Meteor.subscribe('_ServerObject_callbacks');
