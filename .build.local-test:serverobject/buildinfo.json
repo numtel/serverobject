@@ -1,0 +1,41 @@
+{
+  "builtBy": "meteor/13",
+  "buildDependencies": {
+    "os.json": {
+      "files": {
+        "/home/ben/meteor/serverobject/package.js": "08a544bc68aab40cb66799695cbaf3815915b07a",
+        "/home/ben/meteor/serverobject/serverobject-tests.js": "f625704ddc723b4d2e8882bc1cecca6931cbbfd8"
+      },
+      "directories": []
+    },
+    "web.browser.json": {
+      "files": {
+        "/home/ben/meteor/serverobject/package.js": "08a544bc68aab40cb66799695cbaf3815915b07a",
+        "/home/ben/meteor/serverobject/serverobject-tests.js": "f625704ddc723b4d2e8882bc1cecca6931cbbfd8"
+      },
+      "directories": []
+    },
+    "web.cordova.json": {
+      "files": {
+        "/home/ben/meteor/serverobject/package.js": "08a544bc68aab40cb66799695cbaf3815915b07a",
+        "/home/ben/meteor/serverobject/serverobject-tests.js": "f625704ddc723b4d2e8882bc1cecca6931cbbfd8"
+      },
+      "directories": []
+    }
+  },
+  "pluginDependencies": {
+    "files": {
+      "/home/ben/meteor/serverobject/package.js": "08a544bc68aab40cb66799695cbaf3815915b07a"
+    },
+    "directories": []
+  },
+  "source": "/home/ben/meteor/serverobject",
+  "buildTimeDirectDependencies": {
+    "serverobject": "0.0.1+8df81c777474b952e9e2320205965c0dc4223147",
+    "test-helpers": "1.0.1",
+    "meteor": "1.1.0",
+    "tinytest": "1.0.1"
+  },
+  "buildTimePluginDependencies": {},
+  "cordovaDependencies": null
+}

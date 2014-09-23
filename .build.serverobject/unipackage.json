@@ -1,0 +1,23 @@
+{
+  "format": "unipackage-pre2",
+  "name": "serverobject",
+  "summary": "Instantiate and call methods on objects on the server from the client.",
+  "version": "0.0.1+8df81c777474b952e9e2320205965c0dc4223147",
+  "earliestCompatibleVersion": "0.0.0",
+  "isTest": false,
+  "unibuilds": [
+    {
+      "arch": "os",
+      "path": "os.json"
+    },
+    {
+      "arch": "web.browser",
+      "path": "web.browser.json"
+    },
+    {
+      "arch": "web.cordova",
+      "path": "web.cordova.json"
+    }
+  ],
+  "plugins": []
+}
