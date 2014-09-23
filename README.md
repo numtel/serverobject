@@ -1,5 +1,7 @@
 # ServerObject Meteor Package
 
+[![Build Status](https://travis-ci.org/numtel/serverobject.svg?branch=master)](https://travis-ci.org/numtel/serverobject)
+
 ### Installation
 
 Run the following command
