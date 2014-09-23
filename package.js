@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Instantiate and call methods on objects on the server from the client.",
+  summary: "Create proxy objects on the client for even easier server integration.",
   version: "0.0.2",
   git: "https://github.com/numtel/serverobject.git"
 });
@@ -12,7 +12,8 @@ Package.onUse(function(api) {
 
 Package.onTest(function(api) {
   api.use('tinytest');
-  api.use('numtel:serverobject');
   api.use('test-helpers');
+  api.addFiles('serverobject.js');
+  api.addFiles('serverobject-server.js', 'server');
   api.addFiles('serverobject-tests.js');
 });
