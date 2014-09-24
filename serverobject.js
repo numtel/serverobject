@@ -1,14 +1,14 @@
-// ServerObject Meteor Package v0.0.7
+// ServerObject Meteor Package v0.0.8
 // https://github.com/numtel/serverobject
 // ben@latenightsketches.com, MIT License
 
 ServerObject = function(){
   if(arguments.length < 2){
-    throw new Error('Must pass object identifier key string and callback.');
+    throw new Meteor.Error(400, 'Must pass object identifier key string and callback.');
   };
   var callback = Array.prototype.pop.call(arguments);
   if(typeof callback !== 'function'){
-    throw new Error('Must pass callback.');
+    throw new Meteor.Error(400, 'Must pass callback.');
   };
   Meteor.apply('_ServerObject_create', arguments, function(error, result){
     if(error){
@@ -60,7 +60,7 @@ ServerObject.updateObject = function(result){
       var callback = Array.prototype.pop.call(arguments);
       // Check for main callback
       if(callback !== undefined  && typeof callback !== 'function'){
-        throw new Error('Must pass callback.');
+        throw new Meteor.Error(400, 'Must pass callback.');
       };
 
       // Transcribe any callback arguments
@@ -83,7 +83,9 @@ ServerObject.updateObject = function(result){
           error = result.errVal;
         };
         if(error){
-          callback(error);
+          if(callback){
+            callback(error);
+          };
           return;
         };
 

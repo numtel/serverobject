@@ -2,7 +2,7 @@ ServerObject.allow = function(objs){
   for(var i in objs){
     if(objs.hasOwnProperty(i)){
       if(ServerObject.allowed.hasOwnProperty(i)){
-        throw new Error('ServerObject identifier already exists: ' + i);
+        throw new Meteor.Error(400, 'ServerObject identifier already exists: ' + i);
       };
       ServerObject.allowed[i] = objs[i];
     };
@@ -28,21 +28,36 @@ Meteor.methods({
     var objectKey = Array.prototype.shift.call(arguments);
 
     if(!ServerObject.allowed.hasOwnProperty(objectKey)){
-      throw new Error('Invalid ServerObject identifier: ' + objectKey);
+      throw new Meteor.Error(400, 'Invalid ServerObject identifier: ' + objectKey);
     };
 
     var objDef = ServerObject.allowed[objectKey],
         connectionId = (this.connection ? this.connection.id : 'server'),
-        instanceKey = connectionId + ':' + Random.id(),
-        instance = new Object();
+        instanceKey = connectionId + ':' + Random.id();
 
-    objDef.ref.apply(instance, arguments);
-    instance.prototype = objDef.ref.prototype;
-
-    if(objDef.where && !objDef.where.call(instance)){
-      throw new Error('Permission denied!');
+    // Check allowConstructor
+    var args = arguments;
+    var argsArray = Object.keys(args).map(function(k) { return args[k] });
+    if(objDef.allowConstructor && !objDef.allowConstructor.call(this, argsArray)){
+      throw new Meteor.Error(400, 'Permission denied!');
     };
 
+    // Perform instantiation
+    var f = function(args){
+      return objDef.ref.apply(this, args);
+    };
+    f.prototype = objDef.ref.prototype;
+    var instance = new f(args);
+    instance.prototype = objDef.ref.prototype;
+
+    // Check filterInstances
+    if(objDef.filterInstances){
+      var filtered = objDef.filterInstances.call(instance);
+      if(filtered === undefined){
+        throw new Meteor.Error(400, 'Permission denied!');
+      };
+      instance = filtered;
+    };
 
     if(!instances.hasOwnProperty(connectionId)){
       instances[connectionId] = {};
@@ -52,17 +67,17 @@ Meteor.methods({
     return {
       id: instanceKey,
       values: ServerObject.instanceValues(instance),
-      methods: instanceMethods(instance)
+      methods: instanceMethods(objDef.ref)
     };
   },
   '_ServerObject_method': function(options){
     var connectionId = (this.connection ? this.connection.id : 'server');
     if(!instances[connectionId]){
-      throw new Error('No available instances for this connection.');
+      throw new Meteor.Error(400, 'No available instances for this connection.');
     };
     var instance = instances[connectionId][options.id];
     if(!instance){
-      throw new Error('Invalid instance id: ' + options.id);
+      throw new Meteor.Error(400, 'Invalid instance id: ' + options.id);
     };
 
     var callbacks = [];

@@ -12,7 +12,7 @@ Run the following command
 
 ### Implements
 
-* `ServerObject(type, [argument, argument...,] callback)`
+    ServerObject(type, [argument, argument...,] callback)
 
 Creates a new instance of an object on the server. 
 Can be called from both client and server.
@@ -29,7 +29,13 @@ For methods with their own callbacks, pass callback functions normally but do no
 Instance properties are copied from the server on construction, method calls, and any callbacks.
 On method calls, instance properties from the client are copied to the server.
 
-* `ServerObject.allow({key: {ref: reference, [where: function]}})`
+    ServerObject.allow({
+      key: {
+        ref: reference, 
+        [allowConstructor: function(args),]
+        [filterInstances: function()]
+       }
+    })
 
 Only available on the server, this method defines an object type for instantiation.
 
@@ -37,11 +43,15 @@ Only available on the server, this method defines an object type for instantiati
 
 `ref` refers to the symbolic reference to the variable containing the constructor function (like you would `new reference()`)
 
-`where` refers to an optional function. If supplied, the `where` function will be called on the server after instantiating the object but before responding to the client. Return a boolean to determine whether to proceed with transmitting the instance. The context of the function will be set to the instance itself.
+`allowConstructor` accepts an optional function with one argument: an array of the arguments sent to the constructor. Return a boolean to determine whether to create the instance.
+
+`filterInstances` accepts and optional function with no arguments. The instance is passed as the context (access with `this`). To filter out the instance, `return undefined` to block transmission of the instance to the client. On success, `return this`. You may modify the values of the instance in this function.
 
 ### Usage
 
 The following is based on `serverobject-tests.js`.
+
+**All Errors Should use `Meteor.Error()`**
 
 On the server, create an object definition and register it with ServerObject.allow():
 
@@ -60,8 +70,14 @@ On the server, create an object definition and register it with ServerObject.all
     ServerObject.allow({
       'MyClass': {
         ref: MyClass,
-        where: function(){
-          return this.id === 'test1';
+        allowConstructor: function(args){
+          return typeof args[0] === 'string';
+        },
+        filterInstances: function(){
+          if(this.id !== 'test1'){
+            return undefined;
+          };
+          return this;
         }
       }
     });

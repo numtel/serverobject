@@ -1,11 +1,14 @@
 if(Meteor.isServer){
+  var instanceCount = 0;
   // Create mockup class for use on the server only
   MyClass = function(id){
+    instanceCount++;
+    this.check = this.reverseString('check');
     this.id = id || Random.id();
   };
   MyClass.prototype.reverseString = function(something){
     if(typeof something !== 'string'){
-      throw new Error('Argument must be string!');
+      throw new Meteor.Error(400, 'Argument must be string!');
     };
     this.lastReversed = something;
     return something.split('').reverse().join('');
@@ -13,7 +16,7 @@ if(Meteor.isServer){
   MyClass.prototype.destabilize = function(something, callback, anotherCallback){
     var that = this;
     if(something === 'createError'){
-      throw new Error('Aaaaaack!');
+      throw new Meteor.Error(400, 'Aaaaaack!');
     };
     setTimeout(function(){
       that.buffer = something;
@@ -39,8 +42,15 @@ if(Meteor.isServer){
   ServerObject.allow({
     'MyClass': {
       ref: MyClass,
-      where: function(){
-        return this.id === 'test1';
+      allowConstructor: function(args){
+        return typeof args[0] === 'string';
+      },
+      filterInstances: function(){
+        if(this.id !== 'test1'){
+          return undefined;
+        };
+        this.addMe = 'fromfilter';
+        return this;
       }
     }
   });
@@ -50,9 +60,51 @@ if(Meteor.isServer){
 testAsyncMulti('ServerObject - constructor + value update', [
   function (test, expect) {
     var id = 'test1';
+    if(Meteor.isServer){
+      var beforeCount = instanceCount;
+    };
     ServerObject('MyClass', id, expect(function(error, result){
+      if(Meteor.isServer){
+        test.equal(beforeCount, instanceCount - 1);
+      };
       test.isFalse(error);
       test.equal(result.id, id);
+      test.equal(result.check, 'kcehc');
+      test.equal(result.addMe, 'fromfilter');
+    }));
+  }
+]);
+
+testAsyncMulti('ServerObject - constructor error', [
+  function (test, expect) {
+    var id = 1;
+    if(Meteor.isServer){
+      var beforeCount = instanceCount;
+    };
+    ServerObject('MyClass', id, expect(function(error, result){
+      if(Meteor.isServer){
+        // Instance should never be created
+        test.equal(beforeCount, instanceCount);
+      };
+      test.isFalse(result);
+      test.isTrue(error);
+    }));
+  }
+]);
+
+testAsyncMulti('ServerObject - constructor filtered', [
+  function (test, expect) {
+    var id = 'test-fake';
+    if(Meteor.isServer){
+      var beforeCount = instanceCount;
+    };
+    ServerObject('MyClass', id, expect(function(error, result){
+      if(Meteor.isServer){
+        // Instance is created, then discarded
+        test.equal(beforeCount, instanceCount - 1);
+      };
+      test.isFalse(result);
+      test.isTrue(error);
     }));
   }
 ]);
@@ -93,8 +145,8 @@ testAsyncMulti('ServerObject - synchronous function error', [
     };
     var reverseCallback = expect(function(error, result){
       // This should have failed!
-      test.equal(error instanceof Error, true);
-      test.equal(error.message, 'Argument must be string!');
+      test.isTrue(error);
+      test.equal(error.error, 400);
       test.equal(result, undefined);
     });
     ServerObject('MyClass', 'test1', objCallback);
@@ -122,7 +174,6 @@ testAsyncMulti('ServerObject - async function (2 callbacks) + value update', [
       test.equal(result, argument);
     };
     var anotherCallback = expect(function(error, result){
-      console.log(error);
       test.isFalse(error);
       test.equal(firstCallbackDone, true);
       // Instance should be updated with new values
@@ -146,12 +197,12 @@ testAsyncMulti('ServerObject - async function error', [
     };
     var mainCallback = expect(function(error, result){
       // This should have failed!
-      test.equal(error instanceof Error, true);
-      test.equal(error.message, 'Aaaaaack!');
+      test.isTrue(error);
+      test.equal(error.error, 400);
       test.equal(result, undefined);
     });
     var dontCallback = function(error, result){
-      throw new Error('Should not be called.');
+      throw new Meteor.Error(400, 'Should not be called.');
     };
     ServerObject('MyClass', 'test1', objCallback);
   }
