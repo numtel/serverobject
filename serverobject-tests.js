@@ -29,6 +29,12 @@ if(Meteor.isServer){
     }, 200);
   };
 
+  MyClass.prototype.clearAll = function(){
+    for(var i in this){
+      this[i] = undefined;
+    };
+  };
+
   // Register the mockup class with ServerObject
   ServerObject.allow({
     'MyClass': {
@@ -45,9 +51,7 @@ testAsyncMulti('ServerObject - constructor + value update', [
   function (test, expect) {
     var id = 'test1';
     ServerObject('MyClass', id, expect(function(error, result){
-      if(error){
-        throw error;
-      };
+      test.isFalse(error);
       test.equal(result.id, id);
     }));
   }
@@ -60,17 +64,13 @@ testAsyncMulti('ServerObject - synchronous function + value update both directio
     var toReverse = 'testers';
     var expected = toReverse.split('').reverse().join('');
     var objCallback = function(error, result){
-      if(error){
-        throw error;
-      };
+      test.isFalse(error);
       instance = result;
       instance.testValue = testValue;
       instance.reverseString(toReverse, reverseCallback);
     };
     var reverseCallback = expect(function(error, result){
-      if(error){
-        throw error;
-      };
+      test.isFalse(error);
       // Instance should have values set on client
       test.equal(instance.testValue, testValue);
       // Instance should be updated with new values
@@ -87,9 +87,7 @@ testAsyncMulti('ServerObject - synchronous function error', [
     var instance;
     var toReverse = 1;
     var objCallback = function(error, result){
-      if(error){
-        throw error;
-      };
+      test.isFalse(error);
       instance = result;
       instance.reverseString(toReverse, reverseCallback);
     };
@@ -108,18 +106,14 @@ testAsyncMulti('ServerObject - async function (2 callbacks) + value update', [
     var instance;
     var argument = 'believe it';
     var objCallback = function(error, result){
-      if(error){
-        throw error;
-      };
+      test.isFalse(error);
       instance = result;
       // Third parameter is the synchronous callback, not used in this test
       instance.destabilize(argument, destabilizeCallback, anotherCallback, undefined);
     };
     var firstCallbackDone = false;
     var destabilizeCallback = function(error, result){
-      if(error){
-        throw error;
-      };
+      test.isFalse(error);
       firstCallbackDone = true;
       // Instance should be updated with new values
       test.equal(instance.buffer, argument);
@@ -128,9 +122,8 @@ testAsyncMulti('ServerObject - async function (2 callbacks) + value update', [
       test.equal(result, argument);
     };
     var anotherCallback = expect(function(error, result){
-      if(error){
-        throw error;
-      };
+      console.log(error);
+      test.isFalse(error);
       test.equal(firstCallbackDone, true);
       // Instance should be updated with new values
       test.equal(instance.buffer, argument);
@@ -147,9 +140,7 @@ testAsyncMulti('ServerObject - async function error', [
     var instance;
     var argument = 'createError';
     var objCallback = function(error, result){
-      if(error){
-        throw error;
-      };
+      test.isFalse(error);
       instance = result;
       instance.destabilize(argument, dontCallback, dontCallback, mainCallback);
     };
@@ -162,6 +153,21 @@ testAsyncMulti('ServerObject - async function error', [
     var dontCallback = function(error, result){
       throw new Error('Should not be called.');
     };
+    ServerObject('MyClass', 'test1', objCallback);
+  }
+]);
+
+testAsyncMulti('ServerObject - undefined properties', [
+  function(test, expect) {
+    var instance;
+    var objCallback = function(error, result){
+      test.isFalse(error);
+      instance = result;
+      instance.clearAll(clearCallback);
+    };
+    var clearCallback = expect(function(error, result){
+      test.isUndefined(instance.id);
+    });
     ServerObject('MyClass', 'test1', objCallback);
   }
 ]);

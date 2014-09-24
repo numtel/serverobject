@@ -1,3 +1,6 @@
+// ServerObject Meteor Package v0.0.5
+// https://github.com/numtel/serverobject
+// ben@latenightsketches.com, MIT License
 
 ServerObject = function(){
   if(arguments.length < 2){
@@ -37,7 +40,7 @@ ServerObject.updateObject = function(result){
   // Remove old values/methods
   for(var i in this){
     if(this.hasOwnProperty(i)){
-      delete this[i];
+      this[i] = undefined;
     };
   };
 
