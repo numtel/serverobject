@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Create proxy objects on the client for even easier server integration.",
-  version: "0.0.6",
+  version: "0.0.7",
   git: "https://github.com/numtel/serverobject.git"
 });
 

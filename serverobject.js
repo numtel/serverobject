@@ -1,4 +1,4 @@
-// ServerObject Meteor Package v0.0.6
+// ServerObject Meteor Package v0.0.7
 // https://github.com/numtel/serverobject
 // ben@latenightsketches.com, MIT License
 
@@ -80,7 +80,7 @@ ServerObject.updateObject = function(result){
         args: args
       }, function(error, result){
         if(result && result.errVal){
-          error = new Error(result.errVal);
+          error = result.errVal;
         };
         if(error){
           callback(error);
