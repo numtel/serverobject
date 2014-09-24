@@ -1,4 +1,4 @@
-// ServerObject Meteor Package v0.0.5
+// ServerObject Meteor Package v0.0.6
 // https://github.com/numtel/serverobject
 // ben@latenightsketches.com, MIT License
 

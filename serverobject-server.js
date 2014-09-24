@@ -97,13 +97,7 @@ Meteor.methods({
     try{
       retVal = instance.prototype[options.method].apply(instance, options.args);
     }catch(error){
-      if(typeof error === 'string'){
-        errVal = error;
-      }else if(error instanceof Error){
-        errVal = error.message;
-      }else{
-        errVal = error.toString();
-      };
+      errVal = error;
     };
 
     return {
