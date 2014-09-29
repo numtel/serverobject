@@ -4,13 +4,15 @@ Create proxy objects on the client for even easier server integration.
 
 [![Build Status](https://travis-ci.org/numtel/serverobject.svg?branch=master)](https://travis-ci.org/numtel/serverobject)
 
-### Installation
+## Installation
 
 Run the following command
 
     meteor add numtel:serverobject
 
-### Implements
+## Implements
+
+#### ServerObject()
 
     ServerObject(type, [argument, argument...,] callback)
 
@@ -29,6 +31,10 @@ For methods with their own callbacks, pass callback functions normally but do no
 Instance properties are copied from the server on construction, method calls, and any callbacks.
 On method calls, instance properties from the client are copied to the server.
 
+Prototype functions and object properties prefixed with an underscore will be considered private and unavailable through the instance proxy object.
+
+#### ServerObject.allow()
+
     ServerObject.allow({
       key: {
         ref: reference, 
@@ -39,15 +45,15 @@ On method calls, instance properties from the client are copied to the server.
 
 Only available on the server, this method defines an object type for instantiation.
 
-`key` refers to a string that will identify this type of object. These keys are what is passed into ServerObject() as the `type` argument.
+`key` refers to a string that will identify this type of object. These keys are what is passed into `ServerObject()` as the `type` argument.
 
-`ref` refers to the variable containing the constructor function (like you would `new reference()`)
+`ref` refers to the variable containing the constructor function. (as in `new reference()`)
 
 `allowConstructor` accepts an optional function with one argument: an array of the arguments sent to the constructor. Return a boolean to determine whether to create the instance.
 
 `filterInstances` accepts and optional function with no arguments. The instance is passed as the context (access with `this`). To filter out the instance, `return undefined` to block transmission of the instance to the client. On success, `return this`. You may modify the values of the instance in this function.
 
-### Usage
+## Usage
 
 The following is based on `serverobject-tests.js`.
 
@@ -89,7 +95,6 @@ On the client, create an instance using ServerObject:
       });
     });
 
-### Notes
+## Notes
 
 * All thrown errors should use `Meteor.Error()`
-* Prototype functions and object properties prefixed with an underscore will be considered private and unavailable through the instance proxy object.
