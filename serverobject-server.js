@@ -16,7 +16,8 @@ var instances = {};
 var instanceMethods = function(instance){
   var output = [];
   for(var i in instance.prototype){
-    if(typeof instance.prototype[i] === 'function'){
+    if(typeof instance.prototype[i] === 'function' &&
+        String(i).substr(0,1) !== '_'){
       output.push(i);
     };
   };
@@ -71,6 +72,9 @@ Meteor.methods({
     };
   },
   '_ServerObject_method': function(options){
+    if(String(options.method).substr(0,1) === '_'){
+      throw new Meteor.Error(403, 'Permission denied!');
+    };
     var connectionId = (this.connection ? this.connection.id : 'server');
     if(!instances[connectionId]){
       throw new Meteor.Error(400, 'No available instances for this connection.');

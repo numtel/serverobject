@@ -32,6 +32,10 @@ if(Meteor.isServer){
     }, 200);
   };
 
+  MyClass.prototype._secret = function(){
+    throw new Meteor.Error(500, 'Should not be here');
+  };
+
   MyClass.prototype.clearAll = function(){
     for(var i in this){
       this[i] = undefined;
@@ -148,6 +152,37 @@ testAsyncMulti('ServerObject - synchronous function error', [
       test.isTrue(error);
       test.equal(error.error, 400);
       test.equal(result, undefined);
+    });
+    ServerObject('MyClass', 'test1', objCallback);
+  }
+]);
+
+testAsyncMulti('ServerObject - private function not available', [
+  function (test, expect) {
+    var objCallback = expect(function(error, instance){
+      test.isFalse(error);
+      test.isUndefined(instance._secret);
+    });
+    ServerObject('MyClass', 'test1', objCallback);
+  }
+]);
+
+testAsyncMulti('ServerObject - private function forced call failure', [
+  function (test, expect) {
+    var objCallback = function(error, instance){
+      test.isFalse(error);
+      test.isUndefined(instance._secret);
+      Meteor.call('_ServerObject_method', {
+        id: instance.prototype.instanceKey,
+        method: '_secret',
+        values: ServerObject.instanceValues(instance),
+        args: []
+      }, privateCallback);
+    };
+    var privateCallback = expect(function(error, result){
+      test.isUndefined(result);
+      test.isTrue(error);
+      test.equal(error.error, 403);
     });
     ServerObject('MyClass', 'test1', objCallback);
   }

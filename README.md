@@ -51,8 +51,6 @@ Only available on the server, this method defines an object type for instantiati
 
 The following is based on `serverobject-tests.js`.
 
-**All Errors Should use `Meteor.Error()`**
-
 On the server, create an object definition and register it with ServerObject.allow():
 
     MyClass = function(id){
@@ -90,3 +88,8 @@ On the client, create an instance using ServerObject:
         console.log(result); // Print 'olleh'
       });
     });
+
+### Notes
+
+* All thrown errors should use `Meteor.Error()`
+* Prototype functions prefixed with an underscore will be considered private and unavailable through the instance proxy object.
