@@ -5,6 +5,7 @@ if(Meteor.isServer){
     instanceCount++;
     this.check = this.reverseString('check');
     this.id = id || Random.id();
+    this._something = "secret";
   };
   MyClass.prototype.reverseString = function(something){
     if(typeof something !== 'string'){
@@ -34,6 +35,13 @@ if(Meteor.isServer){
 
   MyClass.prototype._secret = function(){
     throw new Meteor.Error(500, 'Should not be here');
+  };
+
+  MyClass.prototype.getSecret = function(){
+    return this._something;
+  };
+  MyClass.prototype.getAnotherPrivate = function(){
+    return this._anotherPrivate;
   };
 
   MyClass.prototype.clearAll = function(){
@@ -187,6 +195,40 @@ testAsyncMulti('ServerObject - private function forced call failure', [
     ServerObject('MyClass', 'test1', objCallback);
   }
 ]);
+
+testAsyncMulti('ServerObject - private property not directly available', [
+  function (test, expect) {
+    var objCallback = function(error, instance){
+      test.isFalse(error);
+      test.isUndefined(instance._something);
+      instance.getSecret(secretCallback);
+    };
+    var secretCallback = expect(function(error, result){
+      test.isFalse(error);
+      test.equal(result, 'secret');
+    });
+    ServerObject('MyClass', 'test1', objCallback);
+  }
+]);
+
+testAsyncMulti('ServerObject - private property not able to be set', [
+  function (test, expect) {
+    var instance;
+    var objCallback = function(error, result){
+      test.isFalse(error);
+      instance = result;
+      test.isUndefined(instance._something);
+      instance._anotherPrivate = 'erroneous';
+      instance.getAnotherPrivate(secretCallback);
+    };
+    var secretCallback = expect(function(error, result){
+      test.isUndefined(error);
+      test.isUndefined(result);
+    });
+    ServerObject('MyClass', 'test1', objCallback);
+  }
+]);
+
 
 testAsyncMulti('ServerObject - async function (2 callbacks) + value update', [
   function (test, expect) {

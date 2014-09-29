@@ -27,7 +27,8 @@ ServerObject.instanceValues = function(instance){
   for(var i in instance){
     if(instance.hasOwnProperty(i) && 
        i !== 'prototype' && 
-       typeof instance[i] !== 'function'){
+       typeof instance[i] !== 'function' &&
+       String(i).substr(0,1) !== '_'){
       output[i] = instance[i];
     };
   };
@@ -39,7 +40,7 @@ ServerObject.updateObject = function(result){
 
   // Remove old values/methods
   for(var i in this){
-    if(this.hasOwnProperty(i)){
+    if(this.hasOwnProperty(i) && String(i).substr(0,1) !== '_'){
       this[i] = undefined;
     };
   };

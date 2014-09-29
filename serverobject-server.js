@@ -108,6 +108,9 @@ Meteor.methods({
     // Set values
     for(var i in options.values){
       if(options.values.hasOwnProperty(i)){
+        if(String(i).substr(0,1) === '_'){
+          throw new Meteor.Error(403, 'Cannot set private property : ' + i);
+        };
         instance[i] = options.values[i];
       };
     };

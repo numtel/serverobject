@@ -92,4 +92,4 @@ On the client, create an instance using ServerObject:
 ### Notes
 
 * All thrown errors should use `Meteor.Error()`
-* Prototype functions prefixed with an underscore will be considered private and unavailable through the instance proxy object.
+* Prototype functions and object properties prefixed with an underscore will be considered private and unavailable through the instance proxy object.
