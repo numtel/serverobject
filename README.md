@@ -31,7 +31,7 @@ For methods with their own callbacks, pass callback functions normally but do no
 Instance properties are copied from the server on construction, method calls, and any callbacks.
 On method calls, instance properties from the client are copied to the server.
 
-Prototype functions and object properties prefixed with an underscore will be considered private and unavailable through the instance proxy object.
+Except for the `_id` property, prototype functions and object properties prefixed with an underscore will be considered private and unavailable through the instance proxy object.
 
 #### ServerObject.allow()
 

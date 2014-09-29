@@ -5,6 +5,7 @@ if(Meteor.isServer){
     instanceCount++;
     this.check = this.reverseString('check');
     this.id = id || Random.id();
+    this._id = 'notprivate';
     this._something = "secret";
   };
   MyClass.prototype.reverseString = function(something){
@@ -81,6 +82,7 @@ testAsyncMulti('ServerObject - constructor + value update', [
       };
       test.isFalse(error);
       test.equal(result.id, id);
+      test.equal(result._id, 'notprivate');
       test.equal(result.check, 'kcehc');
       test.equal(result.addMe, 'fromfilter');
     }));

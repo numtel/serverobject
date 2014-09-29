@@ -28,7 +28,7 @@ ServerObject.instanceValues = function(instance){
     if(instance.hasOwnProperty(i) && 
        i !== 'prototype' && 
        typeof instance[i] !== 'function' &&
-       String(i).substr(0,1) !== '_'){
+       (i === '_id' || String(i).substr(0,1) !== '_')){
       output[i] = instance[i];
     };
   };
