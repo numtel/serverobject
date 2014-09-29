@@ -41,7 +41,7 @@ Only available on the server, this method defines an object type for instantiati
 
 `key` refers to a string that will identify this type of object. These keys are what is passed into ServerObject() as the `type` argument.
 
-`ref` refers to the symbolic reference to the variable containing the constructor function (like you would `new reference()`)
+`ref` refers to the variable containing the constructor function (like you would `new reference()`)
 
 `allowConstructor` accepts an optional function with one argument: an array of the arguments sent to the constructor. Return a boolean to determine whether to create the instance.
 
@@ -58,7 +58,7 @@ On the server, create an object definition and register it with ServerObject.all
     };
     MyClass.prototype.reverseString = function(something){
       if(typeof something !== 'string'){
-        throw new Error('Argument must be string!');
+        throw new Meteor.Error(400,'Argument must be string!');
       };
       this.lastReversed = something;
       return something.split('').reverse().join('');
