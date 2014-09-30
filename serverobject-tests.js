@@ -34,6 +34,13 @@ if(Meteor.isServer){
     }, 200);
   };
 
+  MyClass.prototype.asyncWork = function(value, callback){
+    var that = this;
+    setTimeout(function(){
+      callback.call(that, value);
+    }, 1000);
+  };
+
   MyClass.prototype._secret = function(){
     throw new Meteor.Error(500, 'Should not be here');
   };
@@ -68,6 +75,20 @@ if(Meteor.isServer){
     }
   });
 
+  // Create another mockup for testing forwardFromClient
+  AnotherClass = function(){
+    this.name = 'de facto';
+  };
+  AnotherClass.prototype.hello = function(){
+    return 'Hello, ' + this.name;
+  };
+  ServerObject.allow({
+    'Another': {
+      ref: AnotherClass,
+      forwardFromClient: true
+    }
+  });
+
 };
 
 testAsyncMulti('ServerObject - constructor + value update', [
@@ -85,6 +106,7 @@ testAsyncMulti('ServerObject - constructor + value update', [
       test.equal(result._id, 'notprivate');
       test.equal(result.check, 'kcehc');
       test.equal(result.addMe, 'fromfilter');
+      test.equal(result.prototype.type, 'MyClass');
     }));
   }
 ]);
@@ -123,7 +145,25 @@ testAsyncMulti('ServerObject - constructor filtered', [
   }
 ]);
 
-testAsyncMulti('ServerObject - synchronous function + value update both directions', [
+testAsyncMulti('ServerObject - forwardFromClient', [
+  function (test, expect) {
+    var instance;
+    var testValue = 'from the client';
+    var expected = 'Hello, ' + testValue;
+    var objCallback = function(error, result){
+      test.isFalse(error);
+      instance = result;
+      instance.name = testValue;
+      instance.hello(helloCallback);
+    };
+    var helloCallback = expect(function(error, result){
+      test.isFalse(error);
+      test.equal(result, expected);
+    });
+    ServerObject('Another', objCallback);
+  }
+]);
+testAsyncMulti('ServerObject - synchronous function + value update', [
   function (test, expect) {
     var instance;
     var testValue = 'from the client';
@@ -137,8 +177,9 @@ testAsyncMulti('ServerObject - synchronous function + value update both directio
     };
     var reverseCallback = expect(function(error, result){
       test.isFalse(error);
-      // Instance should have values set on client
-      test.equal(instance.testValue, testValue);
+      // Instance should NOT have values set on client
+      // forwardFromClient is not set on this class
+      test.isUndefined(instance.testValue);
       // Instance should be updated with new values
       test.equal(instance.lastReversed, toReverse);
       // Check return value

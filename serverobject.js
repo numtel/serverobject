@@ -54,6 +54,7 @@ ServerObject.updateObject = function(result){
 
   this.prototype = {};
   this.prototype.instanceKey = result.id;
+  this.prototype.type = result.type;
 
   // Define pass-thru methods
   result.methods.forEach(function(methodName){

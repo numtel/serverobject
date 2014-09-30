@@ -29,7 +29,7 @@ All methods are now asynchronous, append a callback(`error, result`) argument to
 For methods with their own callbacks, pass callback functions normally but do not forget about the last parameter always being a callback for the method's return value. See `serverobject-tests.js` for an example with multiple callbacks.
 
 Instance properties are copied from the server on construction, method calls, and any callbacks.
-On method calls, instance properties from the client are copied to the server.
+With the `forwardFromClient` option set, instance properties from the client are copied to the server on method calls.
 
 Except for the `_id` property, prototype functions and object properties prefixed with an underscore will be considered private and unavailable through the instance proxy object.
 
@@ -39,7 +39,8 @@ Except for the `_id` property, prototype functions and object properties prefixe
       key: {
         ref: reference, 
         [allowConstructor: function(args),]
-        [filterInstances: function()]
+        [filterInstances: function(),]
+        [forwardFromClient: boolean]
        }
     })
 
@@ -52,6 +53,8 @@ Only available on the server, this method defines an object type for instantiati
 `allowConstructor` accepts an optional function with one argument: an array of the arguments sent to the constructor. Return a boolean to determine whether to create the instance.
 
 `filterInstances` accepts and optional function with no arguments. The instance is passed as the context (access with `this`). To filter out the instance, `return undefined` to block transmission of the instance to the client. On success, `return this`. You may modify the values of the instance in this function.
+
+`forwardFromClient` accepts a boolean to determine whether to update values set on the client instance to the server on method calls. Defaults to false for heightened security.
 
 ## Usage
 
@@ -68,6 +71,12 @@ On the server, create an object definition and register it with ServerObject.all
       };
       this.lastReversed = something;
       return something.split('').reverse().join('');
+    };
+
+    MyClass.prototype.asyncWork = function(value, callback){
+      setTimeout(function(){
+        callback(value);
+      }, 1000);
     };
 
     // Register the mockup class with ServerObject
@@ -87,12 +96,18 @@ On the server, create an object definition and register it with ServerObject.all
     });
 
 
-On the client, create an instance using ServerObject:
+On the client (or server), create an instance using ServerObject:
 
     ServerObject('MyClass', 'test1', function(error, instance){
       instance.reverseString('hello', function(error, result){
         console.log(result); // Print 'olleh'
+        console.log(instance.lastReversed); // Print 'hello'
       });
+
+      // Last argument undefined to discard the normal function return callback
+      instance.asyncWork('hello', function(value){
+        console.log(value); // Print 'hello'
+      }, undefined);
     });
 
 ## Notes

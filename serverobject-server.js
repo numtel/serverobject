@@ -63,10 +63,14 @@ Meteor.methods({
     if(!instances.hasOwnProperty(connectionId)){
       instances[connectionId] = {};
     };
-    instances[connectionId][instanceKey] = instance;
+    instances[connectionId][instanceKey] = {
+      instance: instance,
+      objDef: objDef
+    };
 
     return {
       id: instanceKey,
+      type: objectKey,
       values: ServerObject.instanceValues(instance),
       methods: instanceMethods(objDef.ref)
     };
@@ -79,7 +83,8 @@ Meteor.methods({
     if(!instances[connectionId]){
       throw new Meteor.Error(400, 'No available instances for this connection.');
     };
-    var instance = instances[connectionId][options.id];
+    var instanceMeta = instances[connectionId][options.id];
+    var instance = instanceMeta.instance;
     if(!instance){
       throw new Meteor.Error(400, 'Invalid instance id: ' + options.id);
     };
@@ -105,13 +110,15 @@ Meteor.methods({
       };
     });
 
-    // Set values
-    for(var i in options.values){
-      if(options.values.hasOwnProperty(i)){
-        if(i !== '_id' && String(i).substr(0,1) === '_'){
-          throw new Meteor.Error(403, 'Cannot set private property : ' + i);
+    if(instanceMeta.objDef.forwardFromClient){
+      // Set values
+      for(var i in options.values){
+        if(options.values.hasOwnProperty(i)){
+          if(i !== '_id' && String(i).substr(0,1) === '_'){
+            throw new Meteor.Error(403, 'Cannot set private property : ' + i);
+          };
+          instance[i] = options.values[i];
         };
-        instance[i] = options.values[i];
       };
     };
 
