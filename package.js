@@ -1,8 +1,10 @@
 Package.describe({
   summary: "Create proxy objects on the client for even easier server integration.",
-  version: "0.0.12",
+  version: "0.0.13",
   git: "https://github.com/numtel/serverobject.git"
 });
+
+// Npm.depends({'watchjs': '0.0.0'});
 
 Package.onUse(function(api) {
   api.versionsFrom('METEOR@0.9.2.1');

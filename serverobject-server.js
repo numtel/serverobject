@@ -24,6 +24,30 @@ var instanceMethods = function(instance){
   return output;
 };
 
+// Method called syncronously from _method
+var updateInstance = function(options, instanceMeta){
+  if(!instanceMeta){
+    var connectionId = (this.connection ? this.connection.id : 'server');
+    var instanceMeta = instances[connectionId][options.id];
+  };
+  if(!instanceMeta || instanceMeta.removed || !instanceMeta.instance){
+    throw new Meteor.Error(400, 'Invalid instance id: ' + options.id);
+  };
+  var instance = instanceMeta.instance;
+
+  if(instanceMeta.objDef.forwardFromClient){
+    // Set values
+    for(var i in options.values){
+      if(options.values.hasOwnProperty(i)){
+        if(i !== '_id' && String(i).substr(0,1) === '_'){
+          throw new Meteor.Error(403, 'Cannot set private property : ' + i);
+        };
+        instance[i] = options.values[i];
+      };
+    };
+  };
+};
+
 Meteor.methods({
   '_ServerObject_create': function(){
     var objectKey = Array.prototype.shift.call(arguments);
@@ -60,21 +84,47 @@ Meteor.methods({
       instance = filtered;
     };
 
-    if(!instances.hasOwnProperty(connectionId)){
-      instances[connectionId] = {};
-    };
-    instances[connectionId][instanceKey] = {
+    // Store in cache
+    var instanceMeta = {
       instance: instance,
       objDef: objDef
     };
+    if(!instances.hasOwnProperty(connectionId)){
+      instances[connectionId] = {};
+    };
+    instances[connectionId][instanceKey] = instanceMeta;
+    
+    // Add property watcher
+    var lastValues = ServerObject.instanceValues(instance);
+    var pollValues = function(){
+      var newValues = ServerObject.instanceValues(instance);
+      if(!_.isEqual(lastValues, newValues)){
+        ServerObjectCallbacks.insert({
+          _id: Random.id(),
+          instanceKey: instanceKey,
+          valueUpdate: true,
+          connection: connectionId,
+          timestamp: Date.now(),
+          methods: instanceMethods(objDef.ref),
+          values: newValues
+        });
+        lastValues = newValues;
+      };
+      if(!instanceMeta.removed){
+        Meteor.setTimeout(pollValues, 100);
+      };
+    };
+    Meteor.setTimeout(pollValues, 100);
 
     return {
       id: instanceKey,
       type: objectKey,
       values: ServerObject.instanceValues(instance),
-      methods: instanceMethods(objDef.ref)
+      methods: instanceMethods(objDef.ref),
+      timestamp: Date.now()
     };
   },
+  '_ServerObject_update': updateInstance,
   '_ServerObject_method': function(options){
     if(String(options.method).substr(0,1) === '_'){
       throw new Meteor.Error(403, 'Permission denied!');
@@ -85,7 +135,7 @@ Meteor.methods({
     };
     var instanceMeta = instances[connectionId][options.id];
     var instance = instanceMeta.instance;
-    if(!instance){
+    if(!instance || instanceMeta.removed){
       throw new Meteor.Error(400, 'Invalid instance id: ' + options.id);
     };
 
@@ -104,23 +154,14 @@ Meteor.methods({
             $set: {
               args: arguments,
               values: ServerObject.instanceValues(instance),
-              methods: instanceMethods(instance)}
+              methods: instanceMethods(instance),
+              timestamp: Date.now()}
           });
         });
       };
     });
 
-    if(instanceMeta.objDef.forwardFromClient){
-      // Set values
-      for(var i in options.values){
-        if(options.values.hasOwnProperty(i)){
-          if(i !== '_id' && String(i).substr(0,1) === '_'){
-            throw new Meteor.Error(403, 'Cannot set private property : ' + i);
-          };
-          instance[i] = options.values[i];
-        };
-      };
-    };
+    updateInstance(options, instanceMeta);
 
     var retVal, errVal;
     try{
@@ -135,7 +176,8 @@ Meteor.methods({
       errVal: errVal,
       callbacks: callbacks,
       values: ServerObject.instanceValues(instance),
-      methods: instanceMethods(instance)
+      methods: instanceMethods(instance),
+      timestamp: Date.now()
     };
   },
   '_ServerObject_callbackReceived': function(id){
@@ -155,7 +197,12 @@ Meteor.publish('_ServerObject_callbacks', function(){
   var connectionId = this.connection ? this.connection.id : 'server';
   this._session.socket.on("close", Meteor.bindEnvironment(function(){
     ServerObjectCallbacks.remove({connection: connectionId});
-    delete instances[connectionId];
+    if(instances[connectionId]){
+      for(var i in instances[connectionId]){
+        instances[connectionId][i].removed = true;
+      };
+      delete instances[connectionId];
+    };
   }));
   return ServerObjectCallbacks.find({connection: connectionId});
 });

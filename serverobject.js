@@ -17,10 +17,11 @@ ServerObject = function(){
     };
     var instance = new Object();
     ServerObject.updateObject.call(instance, result);
-
+    instances[result.id] = instance;
     callback(undefined, instance);
   });
 };
+var instances = {};
 
 ServerObject.instanceValues = function(instance){
   var output = {};
@@ -54,7 +55,10 @@ ServerObject.updateObject = function(result){
 
   this.prototype = {};
   this.prototype.instanceKey = result.id;
-  this.prototype.type = result.type;
+  if(result.type){
+    this.prototype.type = result.type;
+  };
+  this.prototype.timestamp = result.timestamp;
 
   // Define pass-thru methods
   result.methods.forEach(function(methodName){
@@ -124,6 +128,17 @@ if(Meteor.isServer){
 var global = this;
 var readyCallbacks = {};
 ServerObjectCallbacks.find(observeClause).observe({
+  added: function(newValues){
+    if(newValues.valueUpdate){
+      // Auto update instance properties
+      var instance = instances[newValues.instanceKey];
+      if(newValues.timestamp > instance.prototype.timestamp){
+        ServerObject.updateObject.call(instance, newValues);
+      };
+      // Remove from queue
+      Meteor.call('_ServerObject_callbackReceived', newValues._id);
+    };
+  },
   // Callback documents are inserted on method call and filled in later
   changed: function(newCallback, oldCallback){
     if(readyCallbacks.hasOwnProperty(newCallback._id)){

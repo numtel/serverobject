@@ -41,6 +41,13 @@ if(Meteor.isServer){
     }, 1000);
   };
 
+  MyClass.prototype.asyncValue = function(value){
+    var that = this;
+    setTimeout(function(){
+      that.byAsync = value;
+    }, 100);
+  };
+
   MyClass.prototype._secret = function(){
     throw new Meteor.Error(500, 'Should not be here');
   };
@@ -163,6 +170,25 @@ testAsyncMulti('ServerObject - forwardFromClient', [
     ServerObject('Another', objCallback);
   }
 ]);
+
+testAsyncMulti('ServerObject - async properties update', [
+  function (test, expect) {
+    var instance;
+    var testValue = 'from the client';
+    var objCallback = function(error, result){
+      test.isFalse(error);
+      instance = result;
+      test.isUndefined(instance.byAsync);
+      instance.asyncValue(testValue, undefined);
+      Meteor.setTimeout(valueCallback, 800);
+    };
+    var valueCallback = expect(function(){
+      test.equal(instance.byAsync, testValue);
+    });
+    ServerObject('MyClass', 'test1', objCallback);
+  }
+]);
+
 testAsyncMulti('ServerObject - synchronous function + value update', [
   function (test, expect) {
     var instance;
