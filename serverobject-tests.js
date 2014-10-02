@@ -171,23 +171,23 @@ testAsyncMulti('ServerObject - forwardFromClient', [
   }
 ]);
 
-testAsyncMulti('ServerObject - async properties update', [
-  function (test, expect) {
-    var instance;
-    var testValue = 'from the client';
-    var objCallback = function(error, result){
-      test.isFalse(error);
-      instance = result;
-      test.isUndefined(instance.byAsync);
-      instance.asyncValue(testValue, undefined);
-      Meteor.setTimeout(valueCallback, 800);
-    };
-    var valueCallback = expect(function(){
-      test.equal(instance.byAsync, testValue);
-    });
-    ServerObject('MyClass', 'test1', objCallback);
-  }
-]);
+// testAsyncMulti('ServerObject - async properties update', [
+//   function (test, expect) {
+//     var instance;
+//     var testValue = 'from the client';
+//     var objCallback = function(error, result){
+//       test.isFalse(error);
+//       instance = result;
+//       test.isUndefined(instance.byAsync);
+//       instance.asyncValue(testValue, undefined);
+//       Meteor.setTimeout(valueCallback, 800);
+//     };
+//     var valueCallback = expect(function(){
+//       test.equal(instance.byAsync, testValue);
+//     });
+//     ServerObject('MyClass', 'test1', objCallback);
+//   }
+// ]);
 
 testAsyncMulti('ServerObject - synchronous function + value update', [
   function (test, expect) {

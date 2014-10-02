@@ -94,27 +94,29 @@ Meteor.methods({
     };
     instances[connectionId][instanceKey] = instanceMeta;
     
-    // Add property watcher
-    var lastValues = ServerObject.instanceValues(instance);
-    var pollValues = function(){
-      var newValues = ServerObject.instanceValues(instance);
-      if(!_.isEqual(lastValues, newValues)){
-        ServerObjectCallbacks.insert({
-          _id: Random.id(),
-          instanceKey: instanceKey,
-          valueUpdate: true,
-          connection: connectionId,
-          timestamp: Date.now(),
-          methods: instanceMethods(objDef.ref),
-          values: newValues
-        });
-        lastValues = newValues;
+    if(objDef.testAutoPush){
+      // Add property watcher
+      var lastValues = ServerObject.instanceValues(instance);
+      var pollValues = function(){
+        var newValues = ServerObject.instanceValues(instance);
+        if(!_.isEqual(lastValues, newValues)){
+          ServerObjectCallbacks.insert({
+            _id: Random.id(),
+            instanceKey: instanceKey,
+            valueUpdate: true,
+            connection: connectionId,
+            timestamp: Date.now(),
+            methods: instanceMethods(objDef.ref),
+            values: newValues
+          });
+          lastValues = newValues;
+        };
+        if(!instanceMeta.removed){
+          Meteor.setTimeout(pollValues, 100);
+        };
       };
-      if(!instanceMeta.removed){
-        Meteor.setTimeout(pollValues, 100);
-      };
+      Meteor.setTimeout(pollValues, 100);
     };
-    Meteor.setTimeout(pollValues, 100);
 
     return {
       id: instanceKey,

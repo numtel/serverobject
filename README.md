@@ -28,7 +28,7 @@ All methods are now asynchronous, append a callback(`error, result`) argument to
 
 For methods with their own callbacks, pass callback functions normally but do not forget about the last parameter always being a callback for the method's return value. See `serverobject-tests.js` for an example with multiple callbacks.
 
-Instance properties are automatically pushed from the server.
+Instance properties are copied from the server on construction, method calls, and any callbacks.
 With the `forwardFromClient` option set, instance properties from the client are copied to the server on method calls.
 
 Except for the `_id` property, prototype functions and object properties prefixed with an underscore will be considered private and unavailable through the instance proxy object.
