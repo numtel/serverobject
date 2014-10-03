@@ -113,7 +113,6 @@ testAsyncMulti('ServerObject - constructor + value update', [
       test.equal(result._id, 'notprivate');
       test.equal(result.check, 'kcehc');
       test.equal(result.addMe, 'fromfilter');
-      test.equal(result.prototype.type, 'MyClass');
     }));
   }
 ]);
@@ -250,7 +249,7 @@ testAsyncMulti('ServerObject - private function forced call failure', [
       test.isFalse(error);
       test.isUndefined(instance._secret);
       Meteor.call('_ServerObject_method', {
-        id: instance.prototype.instanceKey,
+        id: instance.instanceKey,
         method: '_secret',
         values: ServerObject.instanceValues(instance),
         args: []

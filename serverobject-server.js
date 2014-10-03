@@ -68,12 +68,11 @@ Meteor.methods({
     };
 
     // Perform instantiation
-    var f = function(args){
+    var Instance = function(args){
       return objDef.ref.apply(this, args);
     };
-    f.prototype = objDef.ref.prototype;
-    var instance = new f(args);
-    instance.prototype = objDef.ref.prototype;
+    Instance.prototype = objDef.ref.prototype;
+    var instance = new Instance(args);
 
     // Check filterInstances
     if(objDef.filterInstances){
@@ -167,7 +166,7 @@ Meteor.methods({
 
     var retVal, errVal;
     try{
-      retVal = instance.prototype[options.method].apply(instance, options.args);
+      retVal = instance[options.method].apply(instance, options.args);
     }catch(error){
       errVal = error;
     };
@@ -178,7 +177,6 @@ Meteor.methods({
       errVal: errVal,
       callbacks: callbacks,
       values: ServerObject.instanceValues(instance),
-      methods: instanceMethods(instance),
       timestamp: Date.now()
     };
   },

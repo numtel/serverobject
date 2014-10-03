@@ -1,4 +1,4 @@
-// ServerObject Meteor Package v0.0.8
+// ServerObject Meteor Package v0.0.15
 // https://github.com/numtel/serverobject
 // ben@latenightsketches.com, MIT License
 
@@ -15,7 +15,10 @@ ServerObject = function(){
       callback(error);
       return;
     };
-    var instance = new Object();
+    var ServerInstance = function(){};
+    ServerInstance.prototype = buildPrototype(
+      result.methods, result.type, result.id);
+    var instance = new ServerInstance();
     ServerObject.updateObject.call(instance, result);
     instances[result.id] = instance;
     callback(undefined, instance);
@@ -27,7 +30,6 @@ ServerObject.instanceValues = function(instance){
   var output = {};
   for(var i in instance){
     if(instance.hasOwnProperty(i) && 
-       i !== 'prototype' && 
        typeof instance[i] !== 'function' &&
        (i === '_id' || String(i).substr(0,1) !== '_')){
       output[i] = instance[i];
@@ -36,33 +38,14 @@ ServerObject.instanceValues = function(instance){
   return output;
 };
 
-ServerObject.updateObject = function(result){
-  var that = this;
-
-  // Remove old values/methods
-  for(var i in this){
-    if(this.hasOwnProperty(i) && String(i).substr(0,1) !== '_'){
-      this[i] = undefined;
-    };
+var buildPrototype = function(methods, type, key){
+  var prototype = {
+    instanceKey: key,
+    type: type
   };
-
-  // Copy new values
-  for(var i in result.values){
-    if(result.values.hasOwnProperty(i)){
-      this[i] = result.values[i];
-    };
-  };
-
-  this.prototype = {};
-  this.prototype.instanceKey = result.id;
-  if(result.type){
-    this.prototype.type = result.type;
-  };
-  this.prototype.timestamp = result.timestamp;
-
-  // Define pass-thru methods
-  result.methods.forEach(function(methodName){
-    that[methodName] = function(){
+  methods.forEach(function(methodName){
+    prototype[methodName] = function(){
+      var that = this;
       var callback = Array.prototype.pop.call(arguments);
       // Check for main callback
       if(callback !== undefined  && typeof callback !== 'function'){
@@ -80,7 +63,7 @@ ServerObject.updateObject = function(result){
       });
 
       Meteor.call('_ServerObject_method', {
-        id: that.prototype.instanceKey,
+        id: that.instanceKey,
         method: methodName,
         values: ServerObject.instanceValues(that),
         args: args
@@ -111,6 +94,25 @@ ServerObject.updateObject = function(result){
       });
     };
   });
+  return prototype;
+};
+
+ServerObject.updateObject = function(result){
+  var that = this;
+
+  // Remove old values/methods
+  for(var i in this){
+    if(this.hasOwnProperty(i) && String(i).substr(0,1) !== '_'){
+      this[i] = undefined;
+    };
+  };
+
+  // Copy new values
+  for(var i in result.values){
+    if(result.values.hasOwnProperty(i)){
+      this[i] = result.values[i];
+    };
+  };
 };
 
 // Callback infrastructure
@@ -130,11 +132,12 @@ var readyCallbacks = {};
 ServerObjectCallbacks.find(observeClause).observe({
   added: function(newValues){
     if(newValues.valueUpdate){
+      // TODO
       // Auto update instance properties
-      var instance = instances[newValues.instanceKey];
-      if(newValues.timestamp > instance.prototype.timestamp){
-        ServerObject.updateObject.call(instance, newValues);
-      };
+//       var instance = instances[newValues.instanceKey];
+//       if(newValues.timestamp > instance.prototype.timestamp){
+//         ServerObject.updateObject.call(instance, newValues);
+//       };
       // Remove from queue
       Meteor.call('_ServerObject_callbackReceived', newValues._id);
     };
