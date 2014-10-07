@@ -10,7 +10,7 @@ if(Meteor.isServer){
   };
   MyClass.prototype.reverseString = function(something){
     if(typeof something !== 'string'){
-      throw new Meteor.Error(400, 'Argument must be string!');
+      throw new Meteor.Error(400, 'expected-string');
     };
     this.lastReversed = something;
     return something.split('').reverse().join('');
@@ -104,20 +104,35 @@ testAsyncMulti('ServerObject - constructor + value update', [
     if(Meteor.isServer){
       var beforeCount = instanceCount;
     };
-    ServerObject('MyClass', id, expect(function(error, result){
+    var instance = ServerObject('MyClass', id, expect(function(error, result){
       if(Meteor.isServer){
         test.equal(beforeCount, instanceCount - 1);
       };
-      test.isFalse(error);
-      test.equal(result.id, id);
-      test.equal(result._id, 'notprivate');
-      test.equal(result.check, 'kcehc');
-      test.equal(result.addMe, 'fromfilter');
+      if(error) throw error;
+      test.equal(instance.id, id);
+      test.equal(instance._id, 'notprivate');
+      test.equal(instance.check, 'kcehc');
+      test.equal(instance.addMe, 'fromfilter');
     }));
   }
 ]);
 
-testAsyncMulti('ServerObject - constructor error', [
+testAsyncMulti('ServerObject - _close', [
+  function (test, expect) {
+    var instance = ServerObject('MyClass', 'test1', function(error, result){
+      if(error) throw error;
+      instance._close();
+      instance.reverseString('hello', reverseCallback);
+    });
+    var reverseCallback = expect(function(error, result){
+      test.isUndefined(result);
+      test.equal(error.error, 400);
+      test.equal(error.reason, 'invalid-instance');
+    });
+  }
+]);
+
+testAsyncMulti('ServerObject - prohibited-constructor error', [
   function (test, expect) {
     var id = 1;
     if(Meteor.isServer){
@@ -128,8 +143,28 @@ testAsyncMulti('ServerObject - constructor error', [
         // Instance should never be created
         test.equal(beforeCount, instanceCount);
       };
-      test.isFalse(result);
+      test.isUndefined(result);
       test.isTrue(error);
+      test.equal(error.error, 403);
+      test.equal(error.reason, 'prohibited-constructor');
+    }));
+  }
+]);
+
+testAsyncMulti('ServerObject - invalid-type error', [
+  function (test, expect) {
+    if(Meteor.isServer){
+      var beforeCount = instanceCount;
+    };
+    ServerObject('not-going-to-work', expect(function(error, result){
+      if(Meteor.isServer){
+        // Instance should never be created
+        test.equal(beforeCount, instanceCount);
+      };
+      test.isUndefined(result);
+      test.isTrue(error);
+      test.equal(error.error, 400);
+      test.equal(error.reason, 'invalid-type');
     }));
   }
 ]);
@@ -145,8 +180,10 @@ testAsyncMulti('ServerObject - constructor filtered', [
         // Instance is created, then discarded
         test.equal(beforeCount, instanceCount - 1);
       };
-      test.isFalse(result);
+      test.isUndefined(result);
       test.isTrue(error);
+      test.equal(error.error, 403);
+      test.equal(error.reason, 'prohibited-instance');
     }));
   }
 ]);
@@ -157,13 +194,13 @@ testAsyncMulti('ServerObject - forwardFromClient', [
     var testValue = 'from the client';
     var expected = 'Hello, ' + testValue;
     var objCallback = function(error, result){
-      test.isFalse(error);
+      if(error) throw error;
       instance = result;
       instance.name = testValue;
       instance.hello(helloCallback);
     };
     var helloCallback = expect(function(error, result){
-      test.isFalse(error);
+      if(error) throw error;
       test.equal(result, expected);
     });
     ServerObject('Another', objCallback);
@@ -195,13 +232,13 @@ testAsyncMulti('ServerObject - synchronous function + value update', [
     var toReverse = 'testers';
     var expected = toReverse.split('').reverse().join('');
     var objCallback = function(error, result){
-      test.isFalse(error);
+      if(error) throw error;
       instance = result;
       instance.testValue = testValue;
       instance.reverseString(toReverse, reverseCallback);
     };
     var reverseCallback = expect(function(error, result){
-      test.isFalse(error);
+      if(error) throw error;
       // Instance should NOT have values set on client
       // forwardFromClient is not set on this class
       test.isUndefined(instance.testValue);
@@ -219,15 +256,15 @@ testAsyncMulti('ServerObject - synchronous function error', [
     var instance;
     var toReverse = 1;
     var objCallback = function(error, result){
-      test.isFalse(error);
+      if(error) throw error;
       instance = result;
       instance.reverseString(toReverse, reverseCallback);
     };
     var reverseCallback = expect(function(error, result){
-      // This should have failed!
+      test.isUndefined(result);
       test.isTrue(error);
       test.equal(error.error, 400);
-      test.equal(result, undefined);
+      test.equal(error.reason, 'expected-string');
     });
     ServerObject('MyClass', 'test1', objCallback);
   }
@@ -236,7 +273,7 @@ testAsyncMulti('ServerObject - synchronous function error', [
 testAsyncMulti('ServerObject - private function not available', [
   function (test, expect) {
     var objCallback = expect(function(error, instance){
-      test.isFalse(error);
+      if(error) throw error;
       test.isUndefined(instance._secret);
     });
     ServerObject('MyClass', 'test1', objCallback);
@@ -246,12 +283,12 @@ testAsyncMulti('ServerObject - private function not available', [
 testAsyncMulti('ServerObject - private function forced call failure', [
   function (test, expect) {
     var objCallback = function(error, instance){
-      test.isFalse(error);
+      if(error) throw error;
       test.isUndefined(instance._secret);
       Meteor.call('_ServerObject_method', {
-        id: instance.instanceKey,
+        id: instance._instanceKey,
         method: '_secret',
-        values: ServerObject.instanceValues(instance),
+        values: ServerObject._instanceValues(instance),
         args: []
       }, privateCallback);
     };
@@ -259,6 +296,7 @@ testAsyncMulti('ServerObject - private function forced call failure', [
       test.isUndefined(result);
       test.isTrue(error);
       test.equal(error.error, 403);
+      test.equal(error.reason, 'permission-denied');
     });
     ServerObject('MyClass', 'test1', objCallback);
   }
@@ -267,12 +305,12 @@ testAsyncMulti('ServerObject - private function forced call failure', [
 testAsyncMulti('ServerObject - private property not directly available', [
   function (test, expect) {
     var objCallback = function(error, instance){
-      test.isFalse(error);
+      if(error) throw error;
       test.isUndefined(instance._something);
       instance.getSecret(secretCallback);
     };
     var secretCallback = expect(function(error, result){
-      test.isFalse(error);
+      if(error) throw error;
       test.equal(result, 'secret');
     });
     ServerObject('MyClass', 'test1', objCallback);
@@ -283,14 +321,14 @@ testAsyncMulti('ServerObject - private property not able to be set', [
   function (test, expect) {
     var instance;
     var objCallback = function(error, result){
-      test.isFalse(error);
+      if(error) throw error;
       instance = result;
       test.isUndefined(instance._something);
       instance._anotherPrivate = 'erroneous';
       instance.getAnotherPrivate(secretCallback);
     };
     var secretCallback = expect(function(error, result){
-      test.isUndefined(error);
+      if(error) throw error;
       test.isUndefined(result);
     });
     ServerObject('MyClass', 'test1', objCallback);
@@ -303,14 +341,14 @@ testAsyncMulti('ServerObject - async function (2 callbacks) + value update', [
     var instance;
     var argument = 'believe it';
     var objCallback = function(error, result){
-      test.isFalse(error);
+      if(error) throw error;
       instance = result;
       // Third parameter is the synchronous callback, not used in this test
       instance.destabilize(argument, destabilizeCallback, anotherCallback, undefined);
     };
     var firstCallbackDone = false;
     var destabilizeCallback = function(error, result){
-      test.isFalse(error);
+      if(error) throw error;
       firstCallbackDone = true;
       // Instance should be updated with new values
       test.equal(instance.buffer, argument);
@@ -319,7 +357,7 @@ testAsyncMulti('ServerObject - async function (2 callbacks) + value update', [
       test.equal(result, argument);
     };
     var anotherCallback = expect(function(error, result){
-      test.isFalse(error);
+      if(error) throw error;
       test.equal(firstCallbackDone, true);
       // Instance should be updated with new values
       test.equal(instance.buffer, argument);
@@ -336,15 +374,15 @@ testAsyncMulti('ServerObject - async function error', [
     var instance;
     var argument = 'createError';
     var objCallback = function(error, result){
-      test.isFalse(error);
+      if(error) throw error;
       instance = result;
       instance.destabilize(argument, dontCallback, dontCallback, mainCallback);
     };
     var mainCallback = expect(function(error, result){
       // This should have failed!
+      test.isUndefined(result);
       test.isTrue(error);
       test.equal(error.error, 400);
-      test.equal(result, undefined);
     });
     var dontCallback = function(error, result){
       throw new Meteor.Error(400, 'Should not be called.');
@@ -357,11 +395,12 @@ testAsyncMulti('ServerObject - undefined properties', [
   function(test, expect) {
     var instance;
     var objCallback = function(error, result){
-      test.isFalse(error);
+      if(error) throw error;
       instance = result;
       instance.clearAll(clearCallback);
     };
     var clearCallback = expect(function(error, result){
+      if(error) throw error;
       test.isUndefined(instance.id);
     });
     ServerObject('MyClass', 'test1', objCallback);

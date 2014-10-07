@@ -2,7 +2,7 @@ ServerObject.allow = function(objs){
   for(var i in objs){
     if(objs.hasOwnProperty(i)){
       if(ServerObject.allowed.hasOwnProperty(i)){
-        throw new Meteor.Error(400, 'ServerObject identifier already exists: ' + i);
+        throw new Meteor.Error(400, 'duplicate-type');
       };
       ServerObject.allowed[i] = objs[i];
     };
@@ -31,7 +31,7 @@ var updateInstance = function(options, instanceMeta){
     var instanceMeta = instances[connectionId][options.id];
   };
   if(!instanceMeta || instanceMeta.removed || !instanceMeta.instance){
-    throw new Meteor.Error(400, 'Invalid instance id: ' + options.id);
+    throw new Meteor.Error(400, 'invalid-instanceKey');
   };
   var instance = instanceMeta.instance;
 
@@ -39,21 +39,21 @@ var updateInstance = function(options, instanceMeta){
     // Set values
     for(var i in options.values){
       if(options.values.hasOwnProperty(i)){
-        if(i !== '_id' && String(i).substr(0,1) === '_'){
-          throw new Meteor.Error(403, 'Cannot set private property : ' + i);
+        if(String(i).substr(0,1) !== '_' || i === '_id'){
+          instance[i] = options.values[i];
         };
-        instance[i] = options.values[i];
       };
     };
   };
 };
 
 Meteor.methods({
-  '_ServerObject_create': function(){
-    var objectKey = Array.prototype.shift.call(arguments);
+  '_ServerObject_create': function(/* argmuents */){
+    var args = arguments;
+    var objectKey = Array.prototype.shift.call(args);
 
     if(!ServerObject.allowed.hasOwnProperty(objectKey)){
-      throw new Meteor.Error(400, 'Invalid ServerObject identifier: ' + objectKey);
+      throw new Meteor.Error(400, 'invalid-type');
     };
 
     var objDef = ServerObject.allowed[objectKey],
@@ -61,10 +61,9 @@ Meteor.methods({
         instanceKey = connectionId + ':' + Random.id();
 
     // Check allowConstructor
-    var args = arguments;
     var argsArray = Object.keys(args).map(function(k) { return args[k] });
     if(objDef.allowConstructor && !objDef.allowConstructor.call(this, argsArray)){
-      throw new Meteor.Error(400, 'Permission denied!');
+      throw new Meteor.Error(403, 'prohibited-constructor');
     };
 
     // Perform instantiation
@@ -78,7 +77,7 @@ Meteor.methods({
     if(objDef.filterInstances){
       var filtered = objDef.filterInstances.call(instance);
       if(filtered === undefined){
-        throw new Meteor.Error(400, 'Permission denied!');
+        throw new Meteor.Error(403, 'prohibited-instance');
       };
       instance = filtered;
     };
@@ -93,11 +92,12 @@ Meteor.methods({
     };
     instances[connectionId][instanceKey] = instanceMeta;
     
+    // TODO: nyi this feature!
     if(objDef.testAutoPush){
       // Add property watcher
-      var lastValues = ServerObject.instanceValues(instance);
+      var lastValues = ServerObject._instanceValues(instance);
       var pollValues = function(){
-        var newValues = ServerObject.instanceValues(instance);
+        var newValues = ServerObject._instanceValues(instance);
         if(!_.isEqual(lastValues, newValues)){
           ServerObjectCallbacks.insert({
             _id: Random.id(),
@@ -120,7 +120,7 @@ Meteor.methods({
     return {
       id: instanceKey,
       type: objectKey,
-      values: ServerObject.instanceValues(instance),
+      values: ServerObject._instanceValues(instance),
       methods: instanceMethods(objDef.ref),
       timestamp: Date.now()
     };
@@ -128,17 +128,17 @@ Meteor.methods({
   '_ServerObject_update': updateInstance,
   '_ServerObject_method': function(options){
     if(String(options.method).substr(0,1) === '_'){
-      throw new Meteor.Error(403, 'Permission denied!');
+      throw new Meteor.Error(403, 'permission-denied');
     };
     var connectionId = (this.connection ? this.connection.id : 'server');
     if(!instances[connectionId]){
-      throw new Meteor.Error(400, 'No available instances for this connection.');
+      throw new Meteor.Error(400, 'invalid-instance');
     };
     var instanceMeta = instances[connectionId][options.id];
-    var instance = instanceMeta.instance;
-    if(!instance || instanceMeta.removed){
-      throw new Meteor.Error(400, 'Invalid instance id: ' + options.id);
+    if(!instanceMeta || instanceMeta.removed){
+      throw new Meteor.Error(400, 'invalid-instance');
     };
+    var instance = instanceMeta.instance;
 
     var callbacks = [];
 
@@ -154,7 +154,7 @@ Meteor.methods({
           ServerObjectCallbacks.update(callbackId, {
             $set: {
               args: arguments,
-              values: ServerObject.instanceValues(instance),
+              values: ServerObject._instanceValues(instance),
               methods: instanceMethods(instance),
               timestamp: Date.now()}
           });
@@ -176,7 +176,7 @@ Meteor.methods({
       retVal: retVal,
       errVal: errVal,
       callbacks: callbacks,
-      values: ServerObject.instanceValues(instance),
+      values: ServerObject._instanceValues(instance),
       timestamp: Date.now()
     };
   },
@@ -186,10 +186,24 @@ Meteor.methods({
     if(callback.connection === connectionId){
       ServerObjectCallbacks.remove(id);
     };
+  },
+  '_ServerObject_close': function(id){
+    var connectionId = (this.connection ? this.connection.id : 'server');
+    if(!instances[connectionId]){
+      throw new Meteor.Error(400, 'no-instances');
+    };
+    var instanceMeta = instances[connectionId][id];
+    var instance = instanceMeta.instance;
+    if(!instance || instanceMeta.removed){
+      throw new Meteor.Error(400, 'invalid-instance');
+    };
+    instanceMeta.removed = true;
+    delete instances[connectionId][id];
   }
 });
 
 Meteor.startup(function(){
+  // Clean up
   ServerObjectCallbacks.remove({});
 });
 

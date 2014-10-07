@@ -14,10 +14,17 @@ Run the following command
 
 #### ServerObject()
 
-    ServerObject(type, [argument, argument...,] callback)
+    var instance = ServerObject(
+                     type, // Key as defined in ServerObject.allow() on server
+                     [argument, argument...,] // Constructor arguments
+                     function(error, result){...} // Received callback
+                   );
 
 Creates a new instance of an object on the server. 
 Can be called from both client and server.
+
+Object can be defined to local scope synchronously but all properties will be 
+unavailable until the callback.
 
 The first argument is a string corresponding with the object defined using ServerObject.allow().
 The last argument is a callback function with parameters `error` and `instance` respectively.
@@ -32,6 +39,10 @@ Instance properties are copied from the server on construction, method calls, an
 With the `forwardFromClient` option set, instance properties from the client are copied to the server on method calls.
 
 Except for the `_id` property, prototype functions and object properties prefixed with an underscore will be considered private and unavailable through the instance proxy object.
+
+#### instance._close()
+
+Close and clean up an instance on the server.
 
 #### ServerObject.allow()
 
